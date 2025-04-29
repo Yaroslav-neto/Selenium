@@ -11,6 +11,9 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestCardOrderForm {
     private WebDriver driver;
+    private Path userDataDir;
 
     @BeforeAll
     static void setUpAll() {
@@ -25,18 +29,37 @@ class TestCardOrderForm {
     }
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException {
+        // Создаем уникальную временную папку для user-data-dir
+        userDataDir = Files.createTempDirectory("selenium-user-data");
+
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--no-sandbox");
-//        options.addArguments("--headless");
+        options.addArguments("--user-data-dir=" + userDataDir.toAbsolutePath());
+        options.addArguments("--headless");
         driver = new ChromeDriver(options);
         driver.get("http://localhost:9999");
     }
 
     @AfterEach
-    void tearDown() {
-        driver.quit();
+    void tearDown() throws IOException {
+        if (driver != null) {
+            driver.quit();
+        }
+        // Удаляем временную папку
+        if (userDataDir != null && Files.exists(userDataDir)) {
+            Files.walk(userDataDir)
+                    .sorted((a, b) -> -a.compareTo(b)) // удаляем файлы и папки в обратном порядке
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+        }
+        userDataDir = null;
         driver = null;
     }
 
